@@ -1,0 +1,16 @@
+{
+  "name": "webdriver",
+  "version": "1.0.0",
+  "description": "",
+  "main": "loginPortalTest.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "selenium-standalone": "^8.0.8",
+    "webdriverio": "^7.16.13"
+  }
+}

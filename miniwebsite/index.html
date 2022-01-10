@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <h1>The button Element</h1>
+        <button type="button" onclick="ChangeText()">Click Me!</button>
+        <h1 id='testId'>FALSE</h1>
+        <script>
+            function ChangeText() {
+                document.getElementById("testId").innerHTML = "TRUE";
+                window.location = "http://google.com"
+                window.onload = function() {
+                    console.log("Page loaded.")
+                }
+            }
+        </script>
+    </body>
+</html>
