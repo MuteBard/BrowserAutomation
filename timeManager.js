@@ -10,17 +10,42 @@ class TimeManager {
 
     start(url){
         this.logData.set(`${url}`, {
-            start: process.hrtime()
+            start: process.hrtime(),
+            passed: false
         });
     }
     stop(url){
-        const urlData = this.logData.get(url);
-        const sec = process.hrtime(urlData.start)[0] + process.hrtime(urlData.start)[1] / NS_PER_SEC;
-        const ms = Math.trunc(sec * MS_PER_SEC);
-        this.logData.set(`${url}`, {
-            start: process.hrtime(),
-            elapsed: ms
-        });
+        const tm = this.logData.get(url);
+        if(tm){
+            const urlData = this.logData.get(url);
+            const sec = process.hrtime(urlData.start)[0] + process.hrtime(urlData.start)[1] / NS_PER_SEC;
+            const ms = Math.trunc(sec * MS_PER_SEC);
+            
+            this.logData.set(`${url}`, {
+                ...tm,
+                elapsed: ms
+            });
+        }
+    }
+
+    pass(url){
+        const tm = this.logData.get(url);
+        if(tm){
+            this.logData.set(`${url}`, {
+                ...tm,
+                passed: true
+            });
+        }
+    }
+
+    fail(url){
+        const tm = this.logData.get(url);
+        if(tm){
+            this.logData.set(`${url}`, {
+                ...tm,
+                passed: false
+            });
+        }
     }
 
     sleep(ms) {
@@ -44,13 +69,38 @@ class TimeManager {
     }
 
     show(){
-        let urls = Array.from( this.logData.keys());
-        urls.forEach((url) => {
+        const urls = Array.from( this.logData.keys());
+        const updatedUrls = urls.map((url) => {
             const tm = this.logData.get(url);
-            console.log({
-                elapsed: tm.elapsed
-            })
+            return {
+                url,
+                elapsed: tm.elapsed,
+                passed: tm.passed
+            };
+        })
+        
+        const passed = updatedUrls
+        .filter((url) => url.passed === true)
+        .map((url) => { 
+            return {
+                url: url.url,
+                elapsed: url.elapsed
+            };
         });
+
+        const failed = updatedUrls
+        .filter((url) => url.passed === false)
+        .map((url) => { 
+            return {
+                url: url.url,
+                elapsed: url.elapsed
+            };
+        });
+
+        return {
+            passed,
+            failed
+        };
     }
 
     cron(){
@@ -64,6 +114,8 @@ const timeManager = {
     stop: (url) => { return timeManagerInstance.stop(url);},
     sleep: (milliseconds) => { return timeManagerInstance.sleep(milliseconds);},
     elapsed: async (url, func) => { return timeManagerInstance.elapsed(url, func);},
+    pass: (url) => {timeManagerInstance.pass(url)},
+    fail: (url) => {timeManagerInstance.fail(url)},
     show: () => { timeManagerInstance.show();}
 };
 
