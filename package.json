@@ -12,6 +12,7 @@
   "license": "ISC",
   "devDependencies": {
     "fs-extra": "^10.0.0",
+    "node-cron": "^3.0.0",
     "npx": "^10.2.2",
     "selenium-standalone": "^8.0.8",
     "webdriverio": "^7.16.13"

@@ -8,19 +8,29 @@ class TimeManager {
         this.logData = new Map();
     }
 
-    start(url){
-        this.logData.set(`${url}`, {
-            start: process.hrtime(),
-            passed: false
-        });
-    }
-    stop(url){
+    start(url) {
         const tm = this.logData.get(url);
-        if(tm){
+        if (tm) {
+            this.logData.set(`${url}`, {
+                ...tm,
+                url,
+                start: process.hrtime(),
+            });
+        } else {
+            this.logData.set(`${url}`, {
+                url,
+                start: process.hrtime(),
+                passed: false
+            });
+        }
+    }
+    stop(url) {
+        const tm = this.logData.get(url);
+        if (tm) {
             const urlData = this.logData.get(url);
             const sec = process.hrtime(urlData.start)[0] + process.hrtime(urlData.start)[1] / NS_PER_SEC;
             const ms = Math.trunc(sec * MS_PER_SEC);
-            
+
             this.logData.set(`${url}`, {
                 ...tm,
                 elapsed: ms
@@ -28,21 +38,31 @@ class TimeManager {
         }
     }
 
-    pass(url){
+    pass(url) {
         const tm = this.logData.get(url);
-        if(tm){
+        if (tm) {
             this.logData.set(`${url}`, {
                 ...tm,
+                passed: true
+            });
+        } else {
+            this.logData.set(`${url}`, {
+                url,
                 passed: true
             });
         }
     }
 
-    fail(url){
+    fail(url) {
         const tm = this.logData.get(url);
-        if(tm){
+        if (tm) {
             this.logData.set(`${url}`, {
                 ...tm,
+                passed: false
+            });
+        } else {
+            this.logData.set(`${url}`, {
+                url,
                 passed: false
             });
         }
@@ -54,69 +74,85 @@ class TimeManager {
         });
     }
 
-    async elapsed(url, func){
+    addProperty(url, name, value) {
+        const tm = this.logData.get(url);
+        if (tm) {
+            this.logData.set(`${url}`, {
+                ...tm,
+                [name]: value
+            });
+        } else {
+            this.logData.set(`${url}`, {
+                url,
+                passed: false,
+                [name]: value
+            });
+        }
+    }
+
+    async elapsed(url, func) {
         let result = undefined;
         this.start(url);
-    
+
         try {
             result = await func();
         }
         finally {
             this.stop(url);
-            console.log(this.show())
         }
         return result;
     }
 
-    show(){
-        const urls = Array.from( this.logData.keys());
-        const updatedUrls = urls.map((url) => {
-            const tm = this.logData.get(url);
-            return {
-                url,
-                elapsed: tm.elapsed,
-                passed: tm.passed
-            };
-        })
-        
-        const passed = updatedUrls
-        .filter((url) => url.passed === true)
-        .map((url) => { 
-            return {
-                url: url.url,
-                elapsed: url.elapsed
-            };
-        });
+    show() {
+        const urlData = Array.from(this.logData.values());
+        const passed = urlData
+            .filter((url) => url.passed)
+            .map((url) => {
+                delete url['passed'];
+                delete url['start'];
+                return url;
+            })
+            .sort((a, b) => {
+                return a.order - b.order
+            })
 
-        const failed = updatedUrls
-        .filter((url) => url.passed === false)
-        .map((url) => { 
-            return {
-                url: url.url,
-                elapsed: url.elapsed
-            };
-        });
+        const failed = urlData
+            .filter((url) => url.passed === false)
+            .map((url) => {
+                delete url['passed'];
+                delete url['start'];
+                return url;
+            })
+            .sort((a, b) => {
+                return a.order - b.order
+            })
 
-        return {
-            passed,
-            failed
+        const report = {
+            passed: {
+                count: `${passed.length} / ${passed.length + failed.length}`,
+                list: passed
+            },
+            failed: {
+                count: `${failed.length} / ${passed.length + failed.length}`,
+                list: failed
+            }
         };
-    }
 
-    cron(){
-
+        console.log(JSON.stringify(report, null, 4));
     }
 }
+// `*/${minutes} * * * *`
 
 const timeManagerInstance = new TimeManager();
 const timeManager = {
-    start: (url) => { return timeManagerInstance.start(url);},
-    stop: (url) => { return timeManagerInstance.stop(url);},
-    sleep: (milliseconds) => { return timeManagerInstance.sleep(milliseconds);},
-    elapsed: async (url, func) => { return timeManagerInstance.elapsed(url, func);},
-    pass: (url) => {timeManagerInstance.pass(url)},
-    fail: (url) => {timeManagerInstance.fail(url)},
-    show: () => { timeManagerInstance.show();}
+    start: (url) => { return timeManagerInstance.start(url); },
+    stop: (url) => { return timeManagerInstance.stop(url); },
+    sleep: (milliseconds) => { return timeManagerInstance.sleep(milliseconds); },
+    elapsed: async (url, func) => { return timeManagerInstance.elapsed(url, func); },
+    pass: (url) => { timeManagerInstance.pass(url) },
+    fail: (url) => { timeManagerInstance.fail(url) },
+    show: () => { timeManagerInstance.show(); },
+    addProperty: (url, name, value) => { timeManagerInstance.addProperty(url, name, value); }
 };
 
 exports.timeManager = timeManager;
